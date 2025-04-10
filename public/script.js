@@ -4,39 +4,49 @@ document.addEventListener("DOMContentLoaded", () => {
   const copyBtn = document.getElementById("copyBtn");
   const statusEl = document.getElementById("status");
 
-  let typingTimer;
-  const doneTypingInterval = 5000; // 5 seconds
   let isProcessing = false;
-  let hasProcessed = false; // Flag to prevent loop processing
 
   // Focus on the text area as soon as the page loads
   textInput.focus();
 
   // Set up event listeners
   textInput.addEventListener("input", handleInput);
+  textInput.addEventListener("keydown", handleKeyDown);
   proofreadBtn.addEventListener("click", proofreadText);
   copyBtn.addEventListener("click", copyToClipboard);
 
   function handleInput() {
-    // Reset the timer if the user is still typing
-    clearTimeout(typingTimer);
-
-    // Reset the processed flag when user makes changes
-    hasProcessed = false;
-
+    // Reset the status when user makes changes
     if (textInput.value.trim() !== "") {
-      statusEl.textContent = "Waiting... (5s)";
-      statusEl.className = "status waiting";
-
-      // Start a new timer
-      typingTimer = setTimeout(() => {
-        if (!isProcessing && !hasProcessed && textInput.value.trim() !== "") {
-          proofreadText();
-        }
-      }, doneTypingInterval);
+      statusEl.textContent = "Ready to proofread";
+      statusEl.className = "status";
     } else {
       statusEl.textContent = "Ready";
       statusEl.className = "status";
+    }
+  }
+
+  function handleKeyDown(e) {
+    // Handle Enter for proofreading (only if there's text)
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // Prevent the default line break
+      if (textInput.value.trim() !== "" && !isProcessing) {
+        proofreadText();
+      }
+      return;
+    }
+
+    // Handle Shift+Enter for line breaks
+    if (e.key === "Enter" && e.shiftKey) {
+      // Let the default behavior happen (inserting a line break)
+      return;
+    }
+
+    // Handle Ctrl+Shift+C for direct copying
+    if ((e.key === "C" || e.key === "c") && e.ctrlKey && e.shiftKey) {
+      e.preventDefault();
+      copyToClipboard();
+      return;
     }
   }
 
@@ -48,8 +58,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Prevent multiple processing of the same content
-    hasProcessed = true;
     isProcessing = true;
     statusEl.textContent = "Processing...";
     statusEl.className = "status processing";
@@ -75,15 +83,10 @@ document.addEventListener("DOMContentLoaded", () => {
       statusEl.textContent = "Success!";
       statusEl.className = "status success";
       copyBtn.disabled = false;
-
-      // Auto copy to clipboard
-      copyToClipboard();
     } catch (error) {
       console.error("Error:", error);
       statusEl.textContent = "Error!";
       statusEl.className = "status error";
-      // Reset the processed flag on error to allow retrying
-      hasProcessed = false;
     } finally {
       isProcessing = false;
       proofreadBtn.disabled = false;
